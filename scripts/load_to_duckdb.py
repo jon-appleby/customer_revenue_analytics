@@ -7,7 +7,7 @@ con = duckdb.connect(DUCK_DB_DIR)
 con.execute('CREATE SCHEMA IF NOT EXISTS raw')
 
 tables = {
-    'customers': 'olist_orders_dataset.csv',
+    'customers': 'olist_customers_dataset.csv',
     'geolocation': 'olist_geolocation_dataset.csv',
     'order_items': 'olist_order_items_dataset.csv',
     'order_payments': 'olist_order_payments_dataset.csv',
@@ -15,6 +15,7 @@ tables = {
     'orders': 'olist_orders_dataset.csv',
     'products': 'olist_products_dataset.csv',
     'sellers': 'olist_sellers_dataset.csv',
+    'product_category_name_translation': 'product_category_name_translation.csv',
 }
 
 for name, file in tables.items():
@@ -34,8 +35,3 @@ print(con.execute(
         WHERE table_schema = 'raw'
         ORDER BY table_name
     """).fetchall())
-
-shutil.copy(
-    RAW_DATA_DIR / 'product_category_name_translation.csv',
-    DBT_DIR / 'seeds' / 'product_category_name_translation.csv'
-)
