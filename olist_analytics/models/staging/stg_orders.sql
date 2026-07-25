@@ -4,7 +4,7 @@ WITH source AS (
 
 SELECT
     order_id,
-    customer_id,
+    customer_id                                             AS customer_order_id,
     order_status,
     TRY_CAST(order_purchase_timestamp AS TIMESTAMP)         AS order_purchase_timestamp,
     TRY_CAST(order_delivered_customer_date AS TIMESTAMP)    AS order_delivered_customer_date,

@@ -15,7 +15,6 @@ tables = {
     'orders': 'olist_orders_dataset.csv',
     'products': 'olist_products_dataset.csv',
     'sellers': 'olist_sellers_dataset.csv',
-    'product_category_name_translation': 'product_category_name_translation.csv',
 }
 
 for name, file in tables.items():
