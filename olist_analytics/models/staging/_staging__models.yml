@@ -1,0 +1,146 @@
+version: 2
+
+models:
+    
+  - name: stg_customers
+    description: >
+      One row per order/customer. NOTE: the original column
+      "customer_id" is a per-order key, not per customer. It is renamed
+      here to customer_order_id, and the source's customer_unique_id becomes
+      customer_id, so that customer_id always relates to a real
+      customer
+    columns:
+      - name: customer_order_id
+        description: Per-order key. Joins to stg_orders.customer_order_id
+        data_tests: [unique, not_null]
+      - name: customer_id
+        description: Actual customer. Duplicate across orders for repeat buyers
+        data_tests: [not_null]
+      - name: customer_state
+        description: Brazilian state code
+        data_tests: [not_null]
+
+  - name: stg_orders
+    description: One row per order
+    columns:
+      - name: order_id
+        data_tests: [unique, not_null]
+      - name: customer_order_id
+        description: Joins to stg_customers.customer_order_id
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_customers')
+              field: customer_order_id
+      - name: order_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['delivered', 'shipped', 'canceled', 'unavailable',
+                       'invoiced', 'processing', 'created', 'approved']
+      - name: order_purchase_timestamp
+        description: When the order was placed
+        data_tests: [not_null]
+      - name: order_delivered_customer_date
+        description: Null for orders not yet delivered, cancelled, or unavailable
+
+  - name: stg_order_items
+    description: >
+      One row per order. Source of revenue figures
+      (price + freight_value). Not every order has items, cancelled and
+      unavailable orders may have none
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - order_id
+            - order_item_id
+    columns:
+      - name: order_id
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_orders')
+              field: order_id
+      - name: order_item_id
+        description: Number of the item within the order, starting at 1
+        data_tests: [not_null]
+      - name: product_id
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_products')
+              field: product_id
+      - name: seller_id
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_sellers')
+              field: seller_id
+      - name: price
+        description: Item price in Brazilian Real, excluding freight
+        data_tests: [not_null]
+      - name: freight_value
+        description: Freight charged for this item line, in Brazilian Real
+        data_tests: [not_null]
+
+  - name: stg_order_payments
+    description: >
+      One row per payment instrument per order. Installment plans generate
+      multiple rows per order. Excluded from revenue calculations
+      to avoid duplication, used only for payment-method analysis
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - order_id
+            - payment_sequential
+    columns:
+      - name: order_id
+        data_tests: [not_null]
+      - name: payment_type
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['credit_card', 'boleto', 'voucher', 'debit_card', 'not_defined']
+      - name: payment_value
+        data_tests: [not_null]
+
+  - name: stg_order_reviews
+    description: >
+      Customer review, aggregated to one row per order so 
+      downstream joins don't duplicate
+    columns:
+      - name: order_id
+        data_tests: [unique, not_null]
+      - name: review_score
+        description: Mean review score, 1-5. Averaged where an order has multiple reviews
+        data_tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
+              max_value: 5
+      - name: review_count
+        description: Number of review rows
+        data_tests: [not_null]
+
+  - name: stg_products
+    description: >
+      Product catalogue with category names translated to English vai 
+      product_category_name_translation seed. Source column misspellings 
+      corrected ("lenght")
+    columns:
+      - name: product_id
+        data_tests: [unique, not_null]
+      - name: category_name
+        description: English category name. 'unknown' if translation or source is missing
+        data_tests: [not_null]
+      - name: category_name_pt
+        description: Original Portuguese category name
+
+  - name: stg_sellers
+    description: One row per seller
+    columns:
+      - name: seller_id
+        data_tests: [unique, not_null]
+      - name: seller_state
+        description: Two letter Brazilian state code
+        data_tests: [not_null]

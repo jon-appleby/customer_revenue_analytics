@@ -1,0 +1,12 @@
+version: 2
+
+seeds:
+  - name: product_category_name_translation
+    description: >
+      Static lookup mapping the Portuguese product categories to English.
+      Loaded as seed rather than a raw table because it's a static mapping
+    columns:
+      - name: product_category_name
+        data_tests: [unique, not_null]
+      - name: product_category_name_english
+        data_tests: [unique, not_null]

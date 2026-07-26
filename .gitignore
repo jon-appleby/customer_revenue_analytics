@@ -12,7 +12,7 @@ data/
 *.xlsx
 *.parquet
 *.duckdb
-plan.md
+ref
 
 # dbt
 dbt_packages/

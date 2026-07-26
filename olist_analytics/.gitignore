@@ -1,5 +1,27 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+.idea/
 
-target/
+# env
+.env
+.p8
+keys/
+
+# Local
+data/
+*.xlsx
+*.parquet
+*.duckdb
+plan.md
+
+# dbt
 dbt_packages/
 logs/
-.env
+target/
+dbt-env/
+
+# Power BI
+*.pbix
+*.pbit
