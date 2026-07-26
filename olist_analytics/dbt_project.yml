@@ -26,7 +26,7 @@ models:
     intermediate:
       +materialized: view
     marts:
-      +materialized: table  # table for improved performance, build once instead of computing every dashboard refresh
+      +materialized: table
 
 seeds:
   olist_analytics:

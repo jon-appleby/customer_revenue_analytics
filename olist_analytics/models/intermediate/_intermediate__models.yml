@@ -1,0 +1,25 @@
+version: 2
+
+models:
+  - name: int_order_revenue
+    description: >
+      Order level revenue aggregated from items. Excludes
+      order_payments to prevent installment duplication
+    columns:
+      - name: order_id
+        data_tests: [unique, not_null]
+      - name: order_total_revenue
+        description: merchandise_revenue + freight_revenue, in BRL.
+        data_tests: [not_null]
+
+  - name: int_customer_orders
+    description: >
+      One row per customer, covering lifetime order count, revenue, first
+      and last order dates. Excludes cancelled and unavailable orders
+    columns:
+      - name: customer_id
+        data_tests: [unique, not_null]
+      - name: order_count
+        data_tests: [not_null]
+      - name: total_revenue
+        data_tests: [not_null]
