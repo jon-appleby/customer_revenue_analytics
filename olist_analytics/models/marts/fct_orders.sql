@@ -45,8 +45,8 @@ joined AS (
         rv.review_score
     FROM orders o
     INNER JOIN customers c ON o.customer_order_id = c.customer_order_id
-    LEFT JOIN revenue   r ON o.order_id          = r.order_id
-    LEFT JOIN reviews  rv ON o.order_id          = rv.order_id
+    LEFT JOIN revenue r ON o.order_id = r.order_id
+    LEFT JOIN reviews rv ON o.order_id = rv.order_id
 ),
 
 sequenced AS (

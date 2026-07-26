@@ -1,9 +1,9 @@
 import duckdb
 import shutil
 
-from src.paths import RAW_DATA_DIR, DUCK_DB_DIR, DBT_DIR
+from src.paths import RAW_DATA_DIR, DUCK_DB_FILE, DBT_DIR
 
-con = duckdb.connect(DUCK_DB_DIR)
+con = duckdb.connect(DUCK_DB_FILE)
 con.execute('CREATE SCHEMA IF NOT EXISTS raw')
 
 tables = {
