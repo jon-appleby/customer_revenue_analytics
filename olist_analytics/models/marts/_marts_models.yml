@@ -1,0 +1,119 @@
+version: 2
+
+models:
+
+  - name: dim_customers
+    description: >
+      One row per customer with location taken from most recent order, lifetime value metrics 
+      joined from int_customer_orders
+    columns:
+      - name: customer_id
+        data_tests: [unique, not_null]
+      - name: customer_state
+        data_tests: [not_null]
+      - name: is_repeat_customer
+        description: True where the customer has more than one non-cancelled order.
+
+  - name: dim_products
+    description: Product with English names
+    columns:
+      - name: product_id
+        data_tests: [unique, not_null]
+      - name: category_name
+        data_tests: [not_null]
+
+  - name: dim_sellers
+    description: Seller
+    columns:
+      - name: seller_id
+        data_tests: [unique, not_null]
+
+  - name: fct_orders
+    description: >
+      One row per order, all statuses retained. Contains revenue, delivery performance, satisfaction, 
+      and new vs returning flag
+    columns:
+      - name: order_id
+        data_tests: [unique, not_null]
+      - name: customer_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customers')
+                field: customer_id
+      - name: order_status
+        data_tests: [not_null]
+      - name: customer_order_sequence
+        description: Record ID for customer orders
+        data_tests: [not_null]
+      - name: customer_order_type
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['New', 'Returning']
+      - name: is_on_time_delivery
+        description: Null where the order was never delivered
+      - name: order_total_revenue
+        description: Null for orders with no item lines
+
+  - name: fct_order_items
+    description: >
+      One row per item line with order, customer, and product
+      attributes
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - order_id
+              - order_item_id
+    columns:
+      - name: order_id
+        data_tests: [not_null]
+      - name: item_total_revenue
+        data_tests: [not_null]
+      - name: category_name
+        data_tests: [not_null]
+
+  - name: fct_customer_rfm
+    description: >
+      One row per customer. Recency is measured against  latest order date in the dataset, not current date
+    columns:
+      - name: customer_id
+        data_tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customers')
+                field: customer_id
+      - name: recency_score
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4]
+                quote: false
+      - name: frequency_score
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4]
+                quote: false
+      - name: monetary_score
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4]
+                quote: false
+      - name: customer_segment
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Champions', 'High-Value New', 'New / Promising',
+                         'At Risk (High Value)', 'At Risk', 'Lost / Low Value',
+                         'Needs Attention']
