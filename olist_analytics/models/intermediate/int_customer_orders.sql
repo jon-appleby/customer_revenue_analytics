@@ -1,5 +1,6 @@
 WITH orders AS (
     SELECT * FROM {{ ref('stg_orders')}}
+    WHERE order_status NOT IN ('canceled', 'unavailable')
 ),
 
 customers AS (

@@ -4,6 +4,9 @@ from src.paths import DUCK_DB_FILE
 
 queries = [
     """
+    SELECT table_schema, table_name, table_type FROM information_schema.tables ORDER BY 1, 2;
+    """,
+    """
     SELECT COUNT(*) AS customer_count FROM main.dim_customers;
     """,
     """
@@ -22,6 +25,6 @@ queries = [
 con = duckdb.connect(DUCK_DB_FILE)
 
 for query in queries:
-    print(con.execute(query).df().to_string())
+    print(con.execute(query).df().to_string(),'\n')
 
 con.close()
