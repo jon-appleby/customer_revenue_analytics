@@ -1,11 +1,13 @@
 # Python
-venv/
+.venv/
 __pycache__/
 *.pyc
 .idea/
 
 # env
 .env
+keys/
+*.p8
 
 # Local
 data/
@@ -13,12 +15,14 @@ data/
 *.parquet
 *.duckdb
 ref
+docs/backup/
 
 # dbt
 dbt_packages/
 logs/
 target/
 dbt-env/
+!olist_analytics/seeds/*.csv
 
 # Power BI
 *.pbix

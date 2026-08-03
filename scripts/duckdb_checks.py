@@ -13,7 +13,7 @@ queries = [
     SELECT COUNT(*) AS frequency_count FROM main.fct_customer_rfm WHERE frequency = 1;
     """,
     """
-    SELECT customer_segment, COUNT(*) AS segment_count, ROUND(SUM(monetary), 2)
+    SELECT customer_segment, COUNT(*) AS segment_count, ROUND(SUM(monetary), 2) AS monetary
     FROM main.fct_customer_rfm
     GROUP BY 1 order by 3 desc;
     """,

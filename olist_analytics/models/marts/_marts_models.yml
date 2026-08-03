@@ -1,6 +1,13 @@
 version: 2
 
 models:
+  - name: dim_date
+    description: >
+      Date dimension coverage all dates in Olist dataset. Built in warehouse so every report 
+      shares one calendar
+    columns:
+      - name: date_key
+        data_tests: [unique, not_null]
 
   - name: dim_customers
     description: >

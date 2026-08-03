@@ -62,5 +62,6 @@ sequenced AS (
 SELECT
     *,
     CASE WHEN customer_order_sequence = 1 THEN 'New' ELSE 'Returning' END
-        AS customer_order_type
+        AS customer_order_type,
+    CAST(order_purchase_timestamp AS DATE) AS order_date_key
 FROM sequenced

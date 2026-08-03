@@ -26,7 +26,8 @@ SELECT
     c.customer_state,
     oi.price,
     oi.freight_value,
-    oi.price + oi.freight_value AS item_total_revenue
+    oi.price + oi.freight_value AS item_total_revenue,
+    CAST(order_purchase_timestamp AS DATE) AS order_date_key
 FROM order_items oi
 INNER JOIN orders o ON oi.order_id = o.order_id
 INNER JOIN customers c ON o.customer_order_id = c.customer_order_id
