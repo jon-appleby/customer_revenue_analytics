@@ -8,6 +8,8 @@ models:
     columns:
       - name: date_key
         data_tests: [unique, not_null]
+      - name: is_core_analysis_period
+        data_tests: [not_null]
 
   - name: dim_customers
     description: >
