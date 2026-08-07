@@ -16,5 +16,11 @@ SELECT
     EXTRACT(DAY FROM date_day)          AS day_of_month,
     EXTRACT(DAYOFWEEK FROM date_day)    AS day_of_week,
     DATE_TRUNC('month', date_day)       AS month_start_date,
-    DATE_TRUNC('quarter', date_day)     AS quarter_start_date
+    DATE_TRUNC('quarter', date_day)     AS quarter_start_date,
+    CASE
+        WHEN date_day >= CAST('2017-01-01' AS DATE)
+        AND date_day < CAST('2018-09-01' AS DATE)
+        THEN TRUE
+        ELSE FALSE
+    END AS is_core_analysis_period
 FROM date_spine

@@ -1,0 +1,19 @@
+olist_analytics:
+  outputs:
+    dev:
+      type: duckdb
+      path: 'C:/Users/[username]/python_projects/customer_revenue_analytics/dev.duckdb'
+      threads: 4
+
+    snowflake:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT')}}"
+      user: "{{ env_var('SNOWFLAKE_USER')}}"
+      private_key_path: "{{ env_var('SNOWFLAKE_PRIVATE_KEY_PATH')}}"
+      role: DBT_DEV_ROLE
+      database: OLIST_ANALYTICS
+      warehouse: DBT_WH_XS
+      schema: ANALYTICS
+      threads: 8
+
+  target: dev
