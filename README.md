@@ -52,7 +52,7 @@ deployed end to end:
  
 - **16 dbt models**: staging, intermediate, and marts layers modeling orders, customers, 
 products, and revenue into a tested star schema
-- **99 automated tests**: including cross-layer reconciliation controls that catch join 
+- **86 automated tests**: including cross-layer reconciliation controls that catch join 
 fan-out and silent row loss before they reach a dashboard
 - **Full Snowflake deployment**: raw data loaded via stage and `COPY INTO`, role-based 
 access control, key-pair authentication
