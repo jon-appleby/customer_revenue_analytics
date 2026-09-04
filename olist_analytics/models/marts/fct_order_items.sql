@@ -1,9 +1,32 @@
+{{
+    config(
+        materialized = 'incremental',
+        unique_key = 'order_item_key',
+        incremental_strategy = 'merge',
+        on_schema_change = 'append_new_columns'
+    )
+}}
+
+-- Incremental merge on order_item_key
+-- Configured to refresh the newest three days or orders allowing recent orders to be recalculated if changed
+-- Merge updates matching records and inserts nonmatching records
+
 WITH order_items AS (
     SELECT * FROM {{ ref('stg_order_items') }}
 ),
 
 orders AS (
     SELECT * FROM {{ ref('fct_orders') }}  -- use fct rather than re-derive logic
+
+    {% if is_incremental() %}
+
+    WHERE order_purchase_timestamp >= (
+        SELECT {{ dbt.dateadd('day', -3, 'MAX(order_purchase_timestamp)')}}
+        FROM {{ this }}
+    )
+
+    {% endif %}
+
 ),
 
 customers AS (
@@ -15,6 +38,7 @@ products AS (
 )
 
 SELECT
+    {{ dbt_utils.generate_surrogate_key(['oi.order_id', 'oi.order_item_id'])}} AS order_item_key,
     oi.order_id,
     oi.order_item_id,
     oi.product_id,
