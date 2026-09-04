@@ -2,11 +2,17 @@
  
 A governed analytics platform modeling ~100k Brazilian e-commerce orders into a tested 
 dimensional warehouse, deployed to Snowflake with role-based access control, and surfaced 
-through a Power BI executive dashboard.
+through a Power BI dashboard.
  
 **Stack:** dbt Core | Snowflake | Power BI | Python | SQL
 
 **Data:** [Olist Brazilian E-Commerce Public Dataset](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce) (Kaggle, ~100k real anonymized orders, 2016–2018)
+
+## Scope
+This is a personal proof of concept, not a production system. The source data is a point in time 
+static download from Kaggle. This project is not scheduled and there are no dependencies on 
+the output. This was built to work hands-on with dbt and Snowflake. The documentation below 
+was written up as if this were for production, but ultimately this is just a sandbox.
 
 ---
 
@@ -15,7 +21,7 @@ through a Power BI executive dashboard.
  
 ## Problem
  
-A marketplace's transactional history was spread across nine unrelated CSV extracts with 
+A marketplace's transactional history was spread across nine CSV extracts with 
 no shared definition of revenue, no consistent customer identifier, and no documented 
 treatment of canceled orders. Leadership couldn't get a straight answer to basic 
 questions (total revenue, who the valuable customers are, whether delivery performance 
@@ -42,7 +48,7 @@ different numbers from the same data.
 | High-value customers currently lapsing | 1,132 (R$378K lifetime value) |
 | On-time delivery rate                  | 91.9%                         |
  
-The single-purchase rate indicates this is an acquisition  rather than retention, 
+The high single-purchase rate indicates this is an acquisition rather than retention, 
 and segmentation logic built around repeat-purchase frequency has to account for that.
 
 ## What was built
@@ -52,7 +58,7 @@ deployed end to end:
  
 - **16 dbt models**: staging, intermediate, and marts layers modeling orders, customers, 
 products, and revenue into a tested star schema
-- **86 automated tests**: including cross-layer reconciliation controls that catch join 
+- **88 automated tests**: including cross-layer reconciliation controls that catch join 
 fan-out and silent row loss before they reach a dashboard
 - **Full Snowflake deployment**: raw data loaded via stage and `COPY INTO`, role-based 
 access control, key-pair authentication
@@ -67,8 +73,8 @@ flowchart LR
     A["Olist CSVs"] --> B["Python loader<br/>PUT + COPY INTO"]
     B --> C[("Snowflake RAW")]
     C --> D["staging<br/>7 views"] --> E["intermediate<br/>2 views"] --> F["marts<br/>7 tables"] --> G["Power BI"]
-    style F fill:#d4edda
-    style G fill:#fff3cd
+    style F fill:#d4edda,color:#242323
+    style G fill:#fff3cd,color:#242323
 ```
 
 ### Tech Stack 
@@ -76,7 +82,7 @@ flowchart LR
 |-----------------|-------------------------------------------------------------------|---------------------------------------------|
 | Transformation  | dbt Core 1.12                                                     | Modeling, testing, documentation, lineage   |
 | Local warehouse | DuckDB                                                            | Development target                          |
-| Cloud warehouse | Snowflake (AWS, Enterprise)                                       | Production target                           |
+| Cloud warehouse | Snowflake (AWS, Enterprise)                                       | Deployment target                           |
 | Ingestion       | Python (pandas, duckdb, snowflake-connector-python, cryptography) | Raw CSV loading, RSA key generation         |
 | Testing         | dbt generic tests, dbt_utils, singular SQL tests                  | Data quality and reconciliation controls    |
 | Visualization   | Power BI Desktop                                                  | Executive dashboard                         |
@@ -89,10 +95,10 @@ three downstream models)
 - Marts are what gets queried
 
 The same dbt project runs against a local DuckDB target for fast free 
-iteration and against Snowflake for production, switched with one flag.
+iteration and against Snowflake for "production", switched with --target flag.
  
-**Snowflake** hosts the production warehouse
-- Raw CSVs load through an internal stage with `PUT` and `COPY INTO` rather than pandas, 
+**Snowflake** hosts the "production" warehouse
+- Raw CSVs load through an internal stage with `PUT` and `COPY INTO`, 
 and `INFER_SCHEMA` builds the table directly from the file, without handwritten schema 
 to drift from the source.
 - Access is split across three roles: a service account with full rights to 
@@ -101,7 +107,7 @@ into raw data, and an admin account used by neither tool.
  
 **Power BI** is used for visualization
 - Connects to the warehouse in Import mode against governed marts only, 
-never staging, never raw.
+never staging or raw.
 - Page one covers revenue and delivery operations. 
 - Page two covers customer segmentation and ends in a drillable, ranked list of at-risk customers, 
 not just a chart.
@@ -113,26 +119,37 @@ key generation script.
  
 ## Decisions
  
-- **Customer identity was unclear in the source:** The raw data's `customer_id` is a 
+**Customer identity was unclear in the source:**  
+The raw data's `customer_id` is a 
 per-order key, unique to every single order. Grouping by it makes every customer look 
 like a one-time buyer and breaks retention analysis. Staging redefines 
 `customer_id` to mean the actual person, applied consistently everywhere.
-- **Revenue comes from one place only:** `order_items`, never joined against 
-`order_payments`, which carries multiple rows per order for installment plans and 
-would inflate revenue through fan-out. A reconciliation test checks the two grains 
-agree on every build.
-- **RFM segmentation uses thresholds:** ~96% of customers 
-ordered exactly once, so quartile-based frequency scoring would slice one giant tie 
-group into four meaningless buckets. Recognizing that a standard technique doesn't fit 
-the data mattered more than applying it uniformly.
-- **The reporting period is scoped intentionally:** The extract's first and last months 
-are collection artifacts. November 2016 has zero orders which produced a 699K% 
-month-over-month spike against a near-zero denominator. Trend analysis is scoped to 20 
-complete months, retaining 99.6% of revenue.
-- **Two bugs surfaced only on Snowflake:** Schema inference preserved 
-lowercase CSV headers as case-sensitive identifiers, breaking every model until fixed at 
-the ingestion layer. Also, Snowflake's `TRY_CAST` rejects non-string input where 
-DuckDB's does not. Both were fixed at the layer that caused them.
+
+**Revenue comes from one place only:**  
+`order_items` is the only source of revenue. It contains product_id and seller_id so revenue 
+by category and seller are identifiable. `order_payments` is at payment-level with multiple rows 
+per order for split payments. Joining to items without aggregating would inflate revenue numbers.  
+`assert_revenue_reconciles` compares order revenue in `fct_orders` against item revenue in 
+`fct_order_items` and fails if revenue amounts are different.
+
+**Canceled orders are kept for orders, but excluded for customers:**  
+`fct_orders` and `fct_order_items` keep every order regardless of status, as cancellations are 
+useful to include. `int_customer_orders` filters out canceled orders so customer lifetime measures 
+do not include orders that were not completed.
+
+**RFM segmentation uses thresholds:**  
+~96% of customers ordered exactly once, so applied an explicit grouping based on order count over 
+a quartile, as a quartile would split the large tie across separate buckets.
+
+**The reporting period is scoped intentionally:**  
+The extract's first and last months are collection artifacts. November 2016 has zero orders 
+which produced a 699K% month-over-month spike against a near-zero denominator. 
+Trend analysis is scoped to 20 complete months, retaining 99.6% of revenue.
+
+**Two bugs surfaced only on Snowflake:**  
+Schema inference preserved lowercase CSV headers as case-sensitive identifiers, breaking every 
+model until fixed at the ingestion layer. Also, Snowflake's `TRY_CAST` rejects non-string 
+input where DuckDB's does not. Both were fixed at the layer that caused them.
 
 ## dbt Build
 ### Data quality and testing
@@ -146,7 +163,7 @@ Generic tests:
 
 ### Build result
 ```
-Done. PASS=102  WARN=0  ERROR=0  SKIP=0  TOTAL=102
+Done. PASS=105 WARN=0 ERROR=0 SKIP=0 TOTAL=105
 ```
  
 ![dbt build against Snowflake](docs/images/dbt_build_snowflake.png)
@@ -174,14 +191,13 @@ Three roles separating three concerns:
 | `BI_READER_ROLE` | `SELECT` on the `ANALYTICS` schema only. No `RAW` access. | Power BI                        |
 | `ACCOUNTADMIN`   | Administration                                            | Human operator, used by no tool |
  
-`DBT_USER` is created as `TYPE = SERVICE` with key-pair authentication, replacing password 
-authentication which Snowflake has deprecated for service accounts. A service user cannot sign into Snowsight, so interactive access and programmatic access are structurally separated.
+`DBT_USER` is created as `TYPE = SERVICE` with key-pair authentication.
  
 ![Role hierarchy](docs/images/snowflake_role_hierarchy.png)
 
 ### Ingestion
  
-Raw data is loaded with Snowflake's canonical bulk pattern rather than a Python convenience wrapper:
+Raw data is loaded with Snowflake's bulk pattern rather than a Python  wrapper:
  
 1. `CREATE FILE FORMAT` with `PARSE_HEADER = TRUE`
 2. `CREATE STAGE` (internal named stage)
@@ -193,6 +209,24 @@ Schema inference produces correctly typed columns (`TIMESTAMP_NTZ`, `NUMBER`) ra
 ![Stage listing](docs/images/snowflake_stage_list.png)
  
 ![dbt-created objects in the ANALYTICS schema](docs/images/snowflake_analytics_schema.png)
+
+### Incremental materialization
+`fct_order_items` is built incrementally. All other tables are full rebuilds. Due to 
+the small table sizes complete rebuilds only take a few seconds. This table is large 
+and the grain is two fields, so incremental loading was implemented here.
+
+The merge key is a key over the combined `order_id` and `order_item_id`.
+A three day lookback was used to ensure records that land after a run complete 
+aren't skipped.
+
+### Zero-copy cloning
+An example of zero-copy cloning was used to clone the `ANALYTICS` schema into 
+a dev schema.  
+`docs/resources/zero_copy_clone_example.sql` covers the table and schema cloning.
+
+_Deleting records from a cloned table_  
+![Source unchanged after deleting from the clone](docs/images/snowflake_zcc_edit_clone.png)
+
 ### Connection
  
 ![dbt debug against Snowflake](docs/images/dbt_debug_snowflake.png)
@@ -254,8 +288,6 @@ then `dbt build --target snowflake`.
 
 ## Potential future enhancements
 - **Orchestration**: Dagster or Airflow to schedule ingestion and `dbt build`
-- **Incremental materialization**: Instead of a full rebuild, in production the data would move 
-to an incremental merge strategy
 - **Freshness monitoring**: Add checks for freshness in dbt, so stale data is caught
 
 ---
